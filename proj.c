@@ -6,7 +6,7 @@
 #define INPUT_BUFFER_SIZE 100
 #define TOKEN_BUFFER_SIZE 64
 #define HESH_TOK_DELIM " \t\r\n\a" // \t is tab, \r is carriage return, \n is line feed, \a is alert. (I thinks)
-#define MAX_MATCHES 2
+#define MAX_MATCHES 1
 
 //// Purpose: Function to split the full line of input sent to the shell
 //// Returns: An array of char arrays
@@ -66,7 +66,7 @@ char *hesh_read_line(void)
   size_t buffsize = 0; // getline will allocate a buffer for us (for now)
   
   // Defining regular expression and the regex_t object
-  char* nono_chars = "[^a-zA-Z0-9]";
+  char* nono_chars = "[^a-zA-Z0-9._/-]+";
   regex_t re;
   regmatch_t matches[MAX_MATCHES];
 
@@ -84,21 +84,29 @@ char *hesh_read_line(void)
     }
   }
 
-  printf("About to compile RegEx...");
+  printf("About to compile RegEx...\n");
   // If the regular expression compilation fails, print error and exit
-  if(regcomp(&re, nono_chars, REG_EXTENDED|REG_NOSUB) != 0)
+  if(regcomp(&re, nono_chars, REG_EXTENDED) != 0)
   {
     fprintf(stderr, "Error: regcomp in hesh_read_line");
     exit(EXIT_FAILURE);
   }
   else
-    printf("RegEx Compilation Successful!");
+    printf("RegEx Compilation Successful!\n");
 
   // Execute finding regular expressions in the inputted line, store
   if(regexec(&re, line, MAX_MATCHES, matches, 0) == 0)
-    printf("A matched substring \"%.*s\" is found at position %d to %d.\n", matches[1].rm_so - matches[1].rm_eo, &line[matches[1].rm_so], matches[1].rm_so, matches[1].rm_eo - 1);
+  {
+    printf("Match 0 so - %d\n", matches[0].rm_so);
+    printf("Match 0 eo - %d\n", matches[0].rm_eo);
+    printf("With whole expression, A matched substring \"%.*s\" is found at position %d to %d.\n", matches[0].rm_eo - matches[0].rm_so, &line[matches[0].rm_so], matches[0].rm_so, matches[0].rm_eo - 1);
+    // Regex Sub Expressions
+    //printf("Match 1 so - %d\n", matches[1].rm_so);
+    //printf("Match 1 eo - %d\n", matches[1].rm_eo);
+    //printf("With sub expression, A matched substring \"%s\" is found at position %d to %d.\n", &line[matches[1].rm_so], matches[1].rm_so, matches[1].rm_eo - 1);
+  }
   else
-    printf("No matches were found.");
+    printf("No matches were found.\n");
 
   regfree(&re);
 
