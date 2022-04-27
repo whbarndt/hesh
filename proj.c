@@ -1,12 +1,105 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
-#include <regex.h> //only preinstalled on unix environments
+#include <regex.h>
+#include <string.h>
 
 #define INPUT_BUFFER_SIZE 100
-#define TOKEN_BUFFER_SIZE 64
-#define HESH_TOK_DELIM " \t\r\n\a" // \t is tab, \r is carriage return, \n is line feed, \a is alert. (I thinks)
+#define TOKEN_BUFFER_SIZE 50        // Upper bound since l is a command and you can technically send fifty of them.
+#define HESH_TOK_DELIM " \t\r\n\a"  // \t is tab, \r is carriage return, \n is line feed, \a is alert. (I thinks)
 #define MAX_MATCHES 1
+
+//// Purpose: Print char array
+//// Returns: void
+void print_char_array(char* arr)
+{
+  for(int i = 0; i < strlen(arr); i++)
+  {
+    printf("%c", arr[i]);
+  }
+  printf("\n");
+}
+
+//// Purpose: Function to trim a char array given a char array, original size, and new size.
+//// Returns: void
+void trim_char_array(char* line, int og_amount, int cut_amount)
+{
+  printf("---------------------------------------------\n");
+  printf("Entering trim_char_array function...\n");
+  printf("\n");
+  printf("The input line of length %d is:\n", og_amount);
+  print_char_array(line);
+  char* temp_line = malloc(cut_amount + 1);
+  memcpy(temp_line, line, cut_amount);
+  memset(line, 0, og_amount);
+  memcpy(line, temp_line, cut_amount);
+  printf("The new cut line of length %ld is:\n", strlen(line));
+  print_char_array(line);
+  printf("\n");
+  free(temp_line);
+  printf("Exiting trim_cut_array function...\n");
+  printf("---------------------------------------------\n");
+  printf("\n");
+}
+
+//// Purpose: Function to read the full line of input from stdin
+//// Returns: Char array
+char *hesh_read_line(void)
+{
+  // Defines the line and buffer size variable
+  char *line = NULL;
+  size_t buffsize = 0; // getline will allocate a buffer for us
+  
+  // Defining regular expression and the regex_t object
+  char* nono_chars = "[^ &a-zA-Z0-9._/-]+";
+  regex_t re;
+  regmatch_t matches[MAX_MATCHES];
+
+  // Stores the white space deliminated line into the line variable
+  // If the getline returns -1 error in getline
+  if (getline(&line, &buffsize, stdin) == -1)
+  {
+    // If end-of-file indicator is set, exit 
+    if (feof(stdin)) 
+      exit(EXIT_SUCCESS);  
+    else  
+    {
+      perror("readline\n");
+      exit(EXIT_FAILURE);
+    }
+  }
+
+  // If the input line is greater than 100 characters then trim the array
+  int og_line_length = strlen(line);
+  if(og_line_length > INPUT_BUFFER_SIZE + 1)
+  {
+    printf("Error: Too many arguments in input.\n");
+    printf("Cutting the input to 100 characters.\n");
+    trim_char_array(line, og_line_length, INPUT_BUFFER_SIZE);
+  }
+
+  // If the regular expression compilation fails, print error and exit
+  if(regcomp(&re, nono_chars, REG_EXTENDED) != 0)
+  {
+    fprintf(stderr, "Error: regcomp in hesh_read_line\n");
+    exit(EXIT_FAILURE);
+  }
+  else
+    printf("Regex compilation successful!\n");
+
+  // Execute finding regular expressions in the inputted line, if there is a matched character then trim to the chracter before it.
+  if(regexec(&re, line, MAX_MATCHES, matches, 0) == 0)
+  {
+    printf("Error: Typed an erroneous character, will cut input line to before that character\n");
+    printf("The erroneous substring \"%.*s\" is found at position %d to %d.\n", matches[0].rm_eo - matches[0].rm_so, &line[matches[0].rm_so], matches[0].rm_so, matches[0].rm_eo - 1);
+    trim_char_array(line, strlen(line), matches[0].rm_so);
+  }
+  else
+    printf("No matches were found.\n");
+
+  regfree(&re);
+  return line;
+}
 
 //// Purpose: Function to split the full line of input sent to the shell
 //// Returns: An array of char arrays
@@ -57,62 +150,6 @@ char **hesh_split_line(char *line)
   return tokens;
 }
 
-//// Purpose: Function to read the full line of input from stdin
-//// Returns: Char array
-char *hesh_read_line(void)
-{
-  // Defines the line and buffer size variable
-  char *line = NULL;
-  size_t buffsize = 0; // getline will allocate a buffer for us (for now)
-  
-  // Defining regular expression and the regex_t object
-  char* nono_chars = "[^a-zA-Z0-9._/-]+";
-  regex_t re;
-  regmatch_t matches[MAX_MATCHES];
-
-  // Stores the white space deliminated line into the line variable
-  // If the getline returns -1 error in getline
-  if (getline(&line, &buffsize, stdin) == -1)
-  {
-    // If end-of-file indicator is set, exit 
-    if (feof(stdin)) 
-      exit(EXIT_SUCCESS);  
-    else  
-    {
-      perror("readline");
-      exit(EXIT_FAILURE);
-    }
-  }
-
-  printf("About to compile RegEx...\n");
-  // If the regular expression compilation fails, print error and exit
-  if(regcomp(&re, nono_chars, REG_EXTENDED) != 0)
-  {
-    fprintf(stderr, "Error: regcomp in hesh_read_line");
-    exit(EXIT_FAILURE);
-  }
-  else
-    printf("RegEx Compilation Successful!\n");
-
-  // Execute finding regular expressions in the inputted line, store
-  if(regexec(&re, line, MAX_MATCHES, matches, 0) == 0)
-  {
-    printf("Match 0 so - %d\n", matches[0].rm_so);
-    printf("Match 0 eo - %d\n", matches[0].rm_eo);
-    printf("With whole expression, A matched substring \"%.*s\" is found at position %d to %d.\n", matches[0].rm_eo - matches[0].rm_so, &line[matches[0].rm_so], matches[0].rm_so, matches[0].rm_eo - 1);
-    // Regex Sub Expressions
-    //printf("Match 1 so - %d\n", matches[1].rm_so);
-    //printf("Match 1 eo - %d\n", matches[1].rm_eo);
-    //printf("With sub expression, A matched substring \"%s\" is found at position %d to %d.\n", &line[matches[1].rm_so], matches[1].rm_so, matches[1].rm_eo - 1);
-  }
-  else
-    printf("No matches were found.\n");
-
-  regfree(&re);
-
-  return line;
-}
-
 //// Purpose: Function for main loop
 //// Returns: Void
 void hesh_loop()
@@ -126,11 +163,19 @@ void hesh_loop()
     do {
         printf("$ ");
         line = hesh_read_line();
-        //args = hesh_split_line(line);
+        printf("Returned from hesh_read_line:\n");
+        print_char_array(line);
+        args = hesh_split_line(line);
+        printf("Returned from hesh_split_line:\n");
+        int i = 0;
+        while(args[i] != NULL)
+        {
+          print_char_array(args[i]);
+          i += TOKEN_BUFFER_SIZE;
+        }
         //status = hesh_execute(args);
-        wait();
-        //free(line);
-        //free(args);
+        free(line);
+        free(args);
     } while (status);
 };
 
