@@ -11,15 +11,15 @@
 
 // Declarations of built-in commands
 int hesh_print();
-int hesh_exit();
 int hesh_help();
+int hesh_exit();
 
 // List of built-in commands and their cooresponding functions
 char *builtin_str[] = 
 {
   "print",
-  "exit",
-  "help"
+  "help",
+  "exit"
 };
 
 int (*builtin_func[]) (char **) = 
@@ -217,6 +217,8 @@ int hesh_launch(char **args)
   pid = fork();
   if (pid == 0) 
   {
+    printf("In child process - executing commands\n");
+    printf("\n");
     // Child process
     if (execvp(args[0], args) == -1)
       perror("hesh");
@@ -248,6 +250,7 @@ int hesh_execute(char **args)
   if (args[0] == NULL) 
   {
     // An empty command was entered.
+    printf("An empty command was entered.\n");
     return 1;
   }
 
@@ -255,15 +258,17 @@ int hesh_execute(char **args)
   {
     if (strcmp(args[0], builtin_str[i]) == 0) 
     {
+      printf("Built in function detected. Executing the %s function\n", builtin_str[i]);
+      printf("\n");
       return (*builtin_func[i])(args);
     }
   }
 
+  printf("Entering hesh_launch\n");
   return hesh_launch(args);
 }
 
-
-//// Purpose: Function for main loop
+//// Purpose: Function for main shell loop
 //// Returns: Void
 void hesh_loop()
 {
@@ -286,7 +291,8 @@ void hesh_loop()
           print_char_array(args[i]);
           i += TOKEN_BUFFER_SIZE;
         }
-        //status = hesh_execute(args);
+        printf("Entering hesh_execute\n");
+        status = hesh_execute(args);
         free(line);
         free(args);
     } while (status);
