@@ -49,6 +49,8 @@ int hesh_help()
   }
 
   printf("Use the man command for information on other programs.\n");
+  printf("\n");
+  printf("Beware - hesh stares into your soul...      ◉_◉\n");
   return 1;
 }
 
@@ -279,18 +281,20 @@ void hesh_loop()
 
     // Start of loop
     do {
-        printf("$ ");
+        printf("(¬_¬) - ");
         line = hesh_read_line();
         printf("Returned from hesh_read_line:\n");
         print_char_array(line);
         args = hesh_split_line(line);
         printf("Returned from hesh_split_line:\n");
+        /* Trying to understand how to index through the token array
         int i = 0;
         while(args[i] != NULL)
         {
           print_char_array(args[i]);
           i += TOKEN_BUFFER_SIZE;
         }
+        */
         printf("Entering hesh_execute\n");
         status = hesh_execute(args);
         free(line);
