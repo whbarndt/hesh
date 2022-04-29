@@ -9,8 +9,63 @@
 #define HESH_TOK_DELIM " \t\r\n\a"  // \t is tab, \r is carriage return, \n is line feed, \a is alert. (I thinks)
 #define MAX_MATCHES 1
 
+// Declarations of built-in commands
+int hesh_print();
+int hesh_exit();
+int hesh_help();
+
+// List of built-in commands and their cooresponding functions
+char *builtin_str[] = 
+{
+  "print",
+  "exit",
+  "help"
+};
+
+int (*builtin_func[]) (char **) = 
+{
+  &hesh_print,
+  &hesh_help,
+  &hesh_exit
+};
+
+// Built in commands section
+int hesh_print()
+{
+  printf("PID of current process: %d\n", getpid());
+  printf("PPID of current process: %d\n", getppid());
+  return 1;
+}
+
+int hesh_help()
+{
+  int i;
+  printf("Hunter Barndt's and Eric Capri's hesh\n");
+  printf("Type program names and arguments, and hit enter.\n");
+  printf("The following are built in:\n");
+
+  for (i = 0; i < hesh_num_builtins(); i++) {
+    printf("  %s\n", builtin_str[i]);
+  }
+
+  printf("Use the man command for information on other programs.\n");
+  return 1;
+}
+
+int hesh_exit()
+{
+  return 0;
+}
+
+//// Purpose: To return the number of built in functions 
+//// Returns: An int representing the amount of built in functions
+int hesh_num_builtins() 
+{
+  return sizeof(builtin_str) / sizeof(char *);
+}
+
 //// Purpose: Print char array
-//// Returns: void
+//// Returns: Void
 void print_char_array(char* arr)
 {
   for(int i = 0; i < strlen(arr); i++)
@@ -21,7 +76,7 @@ void print_char_array(char* arr)
 }
 
 //// Purpose: Function to trim a char array given a char array, original size, and new size.
-//// Returns: void
+//// Returns: Void
 void trim_char_array(char* line, int og_amount, int cut_amount)
 {
   printf("---------------------------------------------\n");
@@ -43,7 +98,7 @@ void trim_char_array(char* line, int og_amount, int cut_amount)
 }
 
 //// Purpose: Function to read the full line of input from stdin
-//// Returns: Char array
+//// Returns: Char array of read line
 char *hesh_read_line(void)
 {
   // Defines the line and buffer size variable
@@ -102,7 +157,7 @@ char *hesh_read_line(void)
 }
 
 //// Purpose: Function to split the full line of input sent to the shell
-//// Returns: An array of char arrays
+//// Returns: An array of char arrays - the tokens
 char **hesh_split_line(char *line)
 {
   // Defines the variating buffersize, position variable for token array, a token (char array), and allocates an array of tokens (an array of arrays of characters)
@@ -149,6 +204,64 @@ char **hesh_split_line(char *line)
   tokens[position] = NULL;
   return tokens;
 }
+
+//// Purpose: Purpose is to launch a child process that will excecute a command
+//// Returns: Returns an int based on successful launch - 1 if it works. Will error out if something else happens
+int hesh_launch(char **args)
+{
+  // Defines variables for pid and returned status
+  pid_t pid, wpid;
+  int status;
+
+  // Calls fork system call
+  pid = fork();
+  if (pid == 0) 
+  {
+    // Child process
+    if (execvp(args[0], args) == -1)
+      perror("hesh");
+    exit(EXIT_FAILURE);
+  } 
+  else if (pid < 0)
+  {
+    // Error forking
+    perror("hesh"); 
+  }
+  else 
+  {
+    // Parent process
+    do 
+    {
+      wpid = waitpid(pid, &status, WUNTRACED);
+    } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+  }
+
+  return 1;
+}
+
+//// Purpose: Used to call built-in functions if applicable or calls the launch function
+//// Returns: An integer result on either the built-in function call or launch function, 1 the shell is still active, 0 and the shell will quit
+int hesh_execute(char **args)
+{
+  int i;
+
+  if (args[0] == NULL) 
+  {
+    // An empty command was entered.
+    return 1;
+  }
+
+  for (i = 0; i < hesh_num_builtins(); i++) 
+  {
+    if (strcmp(args[0], builtin_str[i]) == 0) 
+    {
+      return (*builtin_func[i])(args);
+    }
+  }
+
+  return hesh_launch(args);
+}
+
 
 //// Purpose: Function for main loop
 //// Returns: Void
