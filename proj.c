@@ -77,6 +77,21 @@ void print_char_array(char* arr)
   printf("\n");
 }
 
+void print_string_array(char** arr)
+{
+  int c = 0;
+  for(int i = 0; i < 5; i++)
+  {
+    c = 0;
+    while(*(arr[i] + c) != '\0')
+    {
+        printf("%c", *(arr[i] + c));
+        c++;
+    }
+    printf("\n");
+  }  
+}
+
 //// Purpose: Function to trim a char array given a char array, original size, and new size.
 //// Returns: Void
 void trim_char_array(char* line, int og_amount, int cut_amount)
@@ -287,14 +302,7 @@ void hesh_loop()
         print_char_array(line);
         args = hesh_split_line(line);
         printf("Returned from hesh_split_line:\n");
-        /* Trying to understand how to index through the token array
-        int i = 0;
-        while(args[i] != NULL)
-        {
-          print_char_array(args[i]);
-          i += TOKEN_BUFFER_SIZE;
-        }
-        */
+        print_string_array(args);
         printf("Entering hesh_execute\n");
         status = hesh_execute(args);
         free(line);
