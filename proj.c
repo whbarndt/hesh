@@ -77,7 +77,9 @@ void print_char_array(char* arr)
   printf("\n");
 }
 
-void print_string_array(char** arr)
+//// Purpose: Print string array of length 5
+//// Returns: Void
+void print_string_array_5(char** arr)
 {
   int c = 0;
   for(int i = 0; i < 5; i++)
@@ -88,7 +90,7 @@ void print_string_array(char** arr)
         printf("%c", *(arr[i] + c));
         c++;
     }
-    printf("\n");
+    printf(" ");
   }  
 }
 
@@ -293,7 +295,8 @@ void hesh_loop()
     char *line;
     char **args;
     int status;
-
+    int c = 0;
+    int i = 0;
     // Start of loop
     do {
         printf("(¬_¬) - ");
@@ -302,7 +305,26 @@ void hesh_loop()
         print_char_array(line);
         args = hesh_split_line(line);
         printf("Returned from hesh_split_line:\n");
-        print_string_array(args);
+        i = 0;
+        //printf(args);
+        do
+        {
+          c = 0;
+          if(*(args[i]) == '&')
+          {
+            // Store the last command
+            // Start storing new command
+          }
+          while(*(args[i] + c) != '\0')
+          {
+              printf("%c", *(args[i] + c));
+              c++;
+          }
+          printf("\n");
+          i++;
+        } while(args[i] != NULL);
+        printf("\n");
+        printf("Launching all commands");
         printf("Entering hesh_execute\n");
         status = hesh_execute(args);
         free(line);
