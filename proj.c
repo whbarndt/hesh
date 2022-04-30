@@ -264,73 +264,105 @@ int hesh_launch(char **args)
 //// Returns: An integer result on either the built-in function call or launch function, 1 the shell is still active, 0 and the shell will quit
 int hesh_execute(char **args)
 {
-  // Iteration variables
-  int j = 0;
-  int c = 0;
+  int buf_size = TOKEN_BUFFER_SIZE;
+  char **command = malloc(buf_size * sizeof(char*));
 
-  if (args[0] == NULL)  
+  // failed to allocate
+  if (!command)
   {
-    // An empty command was entered.
+    fprintf(stderr, "Error: malloc in hesh_execute.\n");
+    exit(EXIT_FAILURE);
+  }
+
+  if (args[0] == NULL)
+  {
+    // empty command
     printf("An empty command was entered.\n");
     return 1;
   }
-  if(*(args[0]) == ';' || *(args[0]) == '&')
+  if (*(args[0]) == ';' || *(args[0]) == '&')
   {
-    // The & or ; command was sent first.
-    printf("Invalid use of \"&\" or \";\" characters\n");
-    printf("Please use the characters correctly - after a command is given\n");
+    // suffix command sent first
+    printf("Invalid use of \"&\" or \":\" characters.\n");
+    printf("Please use the characters correctly after a proper commans.\n");
     return 1;
   }
-
-  //// SECTION UNFINISHED
-  // Attempting to create lists for commands that come before the & and ; deliminators and process them that way.
-  // Might try a better way later if this doesn't work well.
-  /*
-  char** and_command_list;
-  char** semicol_command_list;
-  int and_iter = 0;
-  int semicol_iter = 0;
-  do
+  
+  int status = 0;
+  int command_reset = 0; // used to reset command array
+  int position = 0;     // traverse command
+  for(int i = 0; i < strlen(args); i++)
   {
-    if(*(args[j]) == '&')
+    if (position >= buf_size)
     {
-      char* temp_command;   
-      strcpy(temp_command, *(args[j-1]));
-      and_command_list[and_iter] = temp_command;
-      and_iter++;
-    }
-    else if(*(args[j]) == ';')
-    {
-      char* temp_command;   
-      strcpy(temp_command, *(args[j-1]));
-      and_command_list[semicol_iter] = temp_command;
-      semicol_iter++;
-    }
-    c = 0;
-    while(*(args[j] + c) != '\0')
-    {
-        printf("%c", *(args[j] + c));
-        curr_command[c] = *(args[j] + c);
-        c++;
-    }
-    printf("\n");
-    j++;
-  } 
-  while(args[j] != NULL);
-  */
+      buf_size += TOKEN_BUFFER_SIZE;
+      command = realloc(command, buf_size * sizeof(char*));
 
-  for (int i = 0; i < hesh_num_builtins(); i++) 
-  {
-    if (strcmp(args[0], builtin_str[i]) == 0) 
-    {
-      printf("Built in function detected. Executing the %s function\n", builtin_str[i]);
-      printf("\n");
-      return (*builtin_func[i])(args);
+      if (!command)
+      {
+        fprintf(stderr, "Error: realloc in hesh_execute.\n");
+        exit(EXIT_FAILURE);
+      }
     }
+
+    if (command_reset == 1) {
+        int buf_size = TOKEN_BUFFER_SIZE;
+        char **command = malloc(buf_size * sizeof(char*));
+        position = 0;
+        command_reset = 0;
+        // failed to allocate
+        if (!command)
+        {
+          fprintf(stderr, "Error: reset malloc in hesh_execute.\n");
+          exit(EXIT_FAILURE);
+        }
+        continue;
+    }
+
+    // check if end of input and execute like semicolon
+    if (*(args[i]) == NULL) {
+      if (command) {
+        status = hesh_launch(command);
+      }
+      break;
+    }
+
+    // make process and wait to finish
+    else if (*(args[i]) == ';') {
+      status = hesh_launch(command);
+      command_reset = 1;
+    }
+
+    // run a concurrent process
+     else if (*(args[i]) == '&') {
+      command_reset = 1;
+      pid_t pid;
+
+      // Calls fork system call
+      pid = fork();
+      if (pid == 0)
+      {
+        printf("In child process - executing commands\n");
+        printf("\n");
+        // Child process
+        if (execvp(command[0], command) == -1)
+          perror("hesh");
+        exit(EXIT_FAILURE);
+      }
+      else if (pid < 0)
+      {
+        // Error forking
+        perror("hesh");
+      }
+      status = 1;
+    }
+    else
+    {
+      command[position] = args[i];
+    }
+    position++;
   }
-
-  printf("Entering hesh_launch\n");
-  return hesh_launch(args);
+  return status;
 }
 
 //// Purpose: Function for main shell loop
