@@ -264,16 +264,62 @@ int hesh_launch(char **args)
 //// Returns: An integer result on either the built-in function call or launch function, 1 the shell is still active, 0 and the shell will quit
 int hesh_execute(char **args)
 {
-  int i;
+  // Iteration variables
+  int j = 0;
+  int c = 0;
 
-  if (args[0] == NULL) 
+  if (args[0] == NULL)  
   {
     // An empty command was entered.
     printf("An empty command was entered.\n");
     return 1;
   }
+  if(*(args[0]) == ';' || *(args[0]) == '&')
+  {
+    // The & or ; command was sent first.
+    printf("Invalid use of \"&\" or \";\" characters\n");
+    printf("Please use the characters correctly - after a command is given\n");
+    return 1;
+  }
 
-  for (i = 0; i < hesh_num_builtins(); i++) 
+  //// SECTION UNFINISHED
+  // Attempting to create lists for commands that come before the & and ; deliminators and process them that way.
+  // Might try a better way later if this doesn't work well.
+  /*
+  char** and_command_list;
+  char** semicol_command_list;
+  int and_iter = 0;
+  int semicol_iter = 0;
+  do
+  {
+    if(*(args[j]) == '&')
+    {
+      char* temp_command;   
+      strcpy(temp_command, *(args[j-1]));
+      and_command_list[and_iter] = temp_command;
+      and_iter++;
+    }
+    else if(*(args[j]) == ';')
+    {
+      char* temp_command;   
+      strcpy(temp_command, *(args[j-1]));
+      and_command_list[semicol_iter] = temp_command;
+      semicol_iter++;
+    }
+    c = 0;
+    while(*(args[j] + c) != '\0')
+    {
+        printf("%c", *(args[j] + c));
+        curr_command[c] = *(args[j] + c);
+        c++;
+    }
+    printf("\n");
+    j++;
+  } 
+  while(args[j] != NULL);
+  */
+
+  for (int i = 0; i < hesh_num_builtins(); i++) 
   {
     if (strcmp(args[0], builtin_str[i]) == 0) 
     {
@@ -296,7 +342,8 @@ void hesh_loop()
     char **args;
     int status;
     int c = 0;
-    int i = 0;
+    int s = 0;
+
     // Start of loop
     do {
         printf("(¬_¬) - ");
@@ -305,26 +352,19 @@ void hesh_loop()
         print_char_array(line);
         args = hesh_split_line(line);
         printf("Returned from hesh_split_line:\n");
-        i = 0;
-        //printf(args);
+        s = 0;
         do
         {
           c = 0;
-          if(*(args[i]) == '&')
+          while(*(args[s] + c) != '\0')
           {
-            // Store the last command
-            // Start storing new command
-          }
-          while(*(args[i] + c) != '\0')
-          {
-              printf("%c", *(args[i] + c));
+              printf("%c", *(args[s] + c));
               c++;
           }
           printf("\n");
-          i++;
-        } while(args[i] != NULL);
+          s++;
+        } while(args[s] != NULL);
         printf("\n");
-        printf("Launching all commands");
         printf("Entering hesh_execute\n");
         status = hesh_execute(args);
         free(line);
