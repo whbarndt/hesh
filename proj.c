@@ -408,30 +408,32 @@ int hesh_execute(char **args)
           built_in = 1;
         }
       }
-      
-      pid_t pid;
-
-      // Calls fork system call
-      pid = fork();
-      if (pid == 0)
+      if(built_in == 0)
       {
-        printf("In child process - executing commands\n");
-        printf("\n");
-        // Child process
-        if (execvp(command[0], command) == -1)
+        pid_t pid;
+
+        // Calls fork system call
+        pid = fork();
+        if (pid == 0)
         {
-          perror("hesh");
-          exit(EXIT_FAILURE);
+          printf("In child process - executing commands\n");
+          printf("\n");
+          // Child process
+          if (execvp(command[0], command) == -1)
+          {
+            perror("hesh");
+            exit(EXIT_FAILURE);
+          }
         }
-      }
-      else if (pid < 0)
-      {
-        // Error forking
-        perror("hesh");
-      }
+        else if (pid < 0)
+        {
+          // Error forking
+          perror("hesh");
+        }
 
-      command_reset = 1;
-      status = 1;
+        command_reset = 1;
+        status = 1;
+      }
     }
     else
     {
