@@ -32,14 +32,18 @@ int (*builtin_func[]) (char **) =
 // Built in commands section
 int hesh_print()
 {
+  printf("-------------------------------\n");
   printf("PID of current process: %d\n", getpid());
   printf("PPID of current process: %d\n", getppid());
+  printf("-------------------------------\n");
+  printf("\n");
   return 1;
 }
 
 int hesh_help()
 {
   int i;
+  printf("-------------------------------\n");
   printf("Hunter Barndt's and Eric Capri's hesh\n");
   printf("Type program names and arguments, and hit enter.\n");
   printf("The following are built in:\n");
@@ -51,11 +55,15 @@ int hesh_help()
   printf("Use the man command for information on other programs.\n");
   printf("\n");
   printf("Beware - hesh stares into your soul...      ◉_◉\n");
+  printf("-------------------------------\n");
+  printf("\n");
   return 1;
 }
 
 int hesh_exit()
 {
+  printf("Exiting.\n");
+  printf("\n");
   return 0;
 }
 
@@ -79,10 +87,11 @@ void print_char_array(char* arr)
 
 //// Purpose: Print string array of length 5
 //// Returns: Void
-void print_string_array_5(char** arr)
+void print_string_array(char** arr)
 {
+  int i = 0;
   int c = 0;
-  for(int i = 0; i < 5; i++)
+  do
   {
     c = 0;
     while(*(arr[i] + c) != '\0')
@@ -91,7 +100,8 @@ void print_string_array_5(char** arr)
         c++;
     }
     printf(" ");
-  }  
+    i++;
+  } while (arr[i] != NULL);
 }
 
 //// Purpose: Function to trim a char array given a char array, original size, and new size.
@@ -230,7 +240,7 @@ int hesh_launch(char **args)
 {
   // Defines variables for pid and returned status
   pid_t pid, wpid;
-  int status;
+  int pstatus;
 
   // Calls fork system call
   pid = fork();
@@ -240,8 +250,11 @@ int hesh_launch(char **args)
     printf("\n");
     // Child process
     if (execvp(args[0], args) == -1)
+    {
       perror("hesh");
-    exit(EXIT_FAILURE);
+      exit(EXIT_FAILURE);
+    }
+    printf("\n");
   } 
   else if (pid < 0)
   {
@@ -253,10 +266,11 @@ int hesh_launch(char **args)
     // Parent process
     do 
     {
-      wpid = waitpid(pid, &status, WUNTRACED);
-    } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+      wpid = waitpid(pid, &pstatus, WUNTRACED);
+    } while (!WIFEXITED(pstatus) && !WIFSIGNALED(pstatus));
   }
-
+  printf("Done with process.\n");
+  printf("\n");
   return 1;
 }
 
@@ -264,6 +278,7 @@ int hesh_launch(char **args)
 //// Returns: An integer result on either the built-in function call or launch function, 1 the shell is still active, 0 and the shell will quit
 int hesh_execute(char **args)
 {
+  printf("Allocating Command Array\n");
   int buf_size = TOKEN_BUFFER_SIZE;
   char **command = malloc(buf_size * sizeof(char*));
 
@@ -278,6 +293,7 @@ int hesh_execute(char **args)
   {
     // empty command
     printf("An empty command was entered.\n");
+    printf("\n");
     return 1;
   }
   if (*(args[0]) == ';' || *(args[0]) == '&')
@@ -285,16 +301,22 @@ int hesh_execute(char **args)
     // suffix command sent first
     printf("Invalid use of \"&\" or \":\" characters.\n");
     printf("Please use the characters correctly after a proper commans.\n");
+    printf("\n");
     return 1;
   }
   
-  int status = 0;
+  int i = 0; // iterator
+  int status = 1; // 1 for continuing and 0 for quitting the shell
   int command_reset = 0; // used to reset command array
   int position = 0;     // traverse command
-  for(int i = 0; i < strlen(args); i++)
+
+  printf("Entering the command array loop\n");
+  do
   {
+    // If we need to reallocate the buffer
     if (position >= buf_size)
     {
+      printf("Reallocating buffer\n");
       buf_size += TOKEN_BUFFER_SIZE;
       command = realloc(command, buf_size * sizeof(char*));
 
@@ -303,9 +325,13 @@ int hesh_execute(char **args)
         fprintf(stderr, "Error: realloc in hesh_execute.\n");
         exit(EXIT_FAILURE);
       }
+      printf("\n");
     }
 
-    if (command_reset == 1) {
+    // Command Reset
+    if (command_reset == 1) 
+    {
+        printf("Resetting Command Array\n");
         int buf_size = TOKEN_BUFFER_SIZE;
         char **command = malloc(buf_size * sizeof(char*));
         position = 0;
@@ -316,26 +342,73 @@ int hesh_execute(char **args)
           fprintf(stderr, "Error: reset malloc in hesh_execute.\n");
           exit(EXIT_FAILURE);
         }
+        printf("\n");
         continue;
     }
 
     // check if end of input and execute like semicolon
-    if (*(args[i]) == NULL) {
-      if (command) {
-        status = hesh_launch(command);
+    if (args[i] == NULL) 
+    {
+      printf("Execute last command\n");
+      int built_in = 0;
+      for (int i = 0; i < hesh_num_builtins(); i++) 
+      {
+        if (strcmp(command[0], builtin_str[i]) == 0) 
+        {
+          printf("Built in function detected. Executing the %s function\n", builtin_str[i]);
+          printf("\n");
+          status = (*builtin_func[i])(args);
+          built_in = 1;
+          printf("Breaking from built in command loop\n");
+          break;
+        }
       }
+      if (command && built_in == 0)
+        status = hesh_launch(command);
+      printf("Breaking from hesh execute loop\n");
       break;
     }
 
     // make process and wait to finish
-    else if (*(args[i]) == ';') {
-      status = hesh_launch(command);
+    else if (*(args[i]) == ';') 
+    {
+      printf("Excecuting a ; command\n");
+      
+      int built_in = 0;  
+      for (int i = 0; i < hesh_num_builtins(); i++) 
+      {
+        if (strcmp(command[0], builtin_str[i]) == 0) 
+        {
+          printf("Built in function detected. Executing the %s function\n", builtin_str[i]);
+          printf("\n");
+          status = (*builtin_func[i])(args);
+          built_in = 1;
+        }
+      }
+      
+      if (built_in == 0)
+        status = hesh_launch(command);
+
       command_reset = 1;
     }
 
     // run a concurrent process
-     else if (*(args[i]) == '&') {
-      command_reset = 1;
+    else if (*(args[i]) == '&') 
+    {
+      printf("Excecuting an & command\n");
+
+      int built_in = 0;  
+      for (int i = 0; i < hesh_num_builtins(); i++) 
+      {
+        if (strcmp(command[0], builtin_str[i]) == 0) 
+        {
+          printf("Built in function detected. Executing the %s function\n", builtin_str[i]);
+          printf("\n");
+          status = (*builtin_func[i])(args);
+          built_in = 1;
+        }
+      }
+      
       pid_t pid;
 
       // Calls fork system call
@@ -346,24 +419,34 @@ int hesh_execute(char **args)
         printf("\n");
         // Child process
         if (execvp(command[0], command) == -1)
+        {
           perror("hesh");
-        exit(EXIT_FAILURE);
+          exit(EXIT_FAILURE);
+        }
       }
       else if (pid < 0)
       {
         // Error forking
         perror("hesh");
       }
+
+      command_reset = 1;
       status = 1;
     }
     else
     {
+      printf("Copying command into command buffer\n");
       command[position] = args[i];
+      printf("Done copying command\n");
+      printf("\n");
     }
     position++;
-  }
+    i++;
+  } while(args[i-1] != NULL);
+  printf("Out of loop.\n");
+  printf("\n");
   return status;
-}
+} 
 
 //// Purpose: Function for main shell loop
 //// Returns: Void
@@ -378,6 +461,7 @@ void hesh_loop()
 
     // Start of loop
     do {
+        //memset(line, 0, 100*sizeof(char));
         printf("(¬_¬) - ");
         line = hesh_read_line();
         printf("Returned from hesh_read_line:\n");
@@ -396,6 +480,7 @@ void hesh_loop()
           printf("\n");
           s++;
         } while(args[s] != NULL);
+        //printf("Size of args according to strlen: %zu\n", strlen(args));  // Will give size of first string in the array
         printf("\n");
         printf("Entering hesh_execute\n");
         status = hesh_execute(args);
@@ -406,12 +491,6 @@ void hesh_loop()
 
 int main(int argc, char **argv)
 {
-  // Load config files, if any.
-
-  // Run shell loop.
   hesh_loop();
-
-  // Perform any shutdown/cleanup.
-
   return 0;
 }
