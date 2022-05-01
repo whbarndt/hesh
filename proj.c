@@ -135,7 +135,7 @@ char *hesh_read_line(void)
   size_t buffsize = 0; // getline will allocate a buffer for us
   
   // Defining regular expression and the regex_t object
-  char* nono_chars = "[^ &a-zA-Z0-9._/-]+";
+  char* nono_chars = "[^ &a-zA-Z0-9._/;-]+";
   regex_t re;
   regmatch_t matches[MAX_MATCHES];
 
@@ -445,6 +445,7 @@ int hesh_execute(char **args)
   } while(args[i-1] != NULL);
   printf("Out of loop.\n");
   printf("\n");
+  free(command);
   return status;
 } 
 
