@@ -440,10 +440,9 @@ int hesh_execute(char **args)
           // Error forking
           perror("hesh");
         }
-
-        command_reset = 1;
-        status = 1;
       }
+      command_reset = 1;
+      status = 1;
     }
     else
     {
